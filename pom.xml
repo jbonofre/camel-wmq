@@ -57,8 +57,12 @@
     <distributionManagement>
         <snapshotRepository>
             <id>nanthrax</id>
-            <url></url>
+            <url>ftp://maven.nanthrax.net/var/www/maven</url>
         </snapshotRepository>
+        <repository>
+            <id>nanthrax</id>
+            <url>ftp://maven.nanthrax.net/var/www/maven</url>
+        </repository>
     </distributionManagement>
 
     <build>
@@ -99,6 +103,13 @@
                 </executions>
             </plugin>
         </plugins>
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ftp</artifactId>
+                <version>2.6</version>
+            </extension>
+        </extensions>
     </build>
 
 </project>
