@@ -157,7 +157,6 @@ public class WMQProducer extends DefaultProducer {
             LOGGER.debug("Message coded character set id (MQCCSI) set to MQCCSI_DEFAULT ({})", MQConstants.MQCCSI_DEFAULT);
             message.writeInt4(MQConstants.MQCCSI_DEFAULT);
         }
-        // TODO use header (I'm speeding up)
         message.writeString(MQConstants.MQFMT_NONE);
         message.writeInt4(MQConstants.MQRFH_NO_FLAGS);
         message.writeInt4(1208);
@@ -186,7 +185,7 @@ public class WMQProducer extends DefaultProducer {
             message.writeString(other);
         }
 
-        // TODO push all other in.headers in the MQ Message
+        // TODO push all other in.headers in the MQ Message ?
 
         message.writeString(in.getBody(String.class));
 

@@ -27,10 +27,12 @@ public class WMQEndpoint extends DefaultEndpoint {
         this.destinationName = destinationName;
     }
 
+    @ManagedAttribute(description = "MQ destination type (queue or topic)")
     public String getDestinationType() {
         return destinationType;
     }
 
+    @ManagedAttribute(description = "MQ destination type (queue or topic)")
     public void setDestinationType(String destinationType) {
         this.destinationType = destinationType;
     }
@@ -38,13 +40,9 @@ public class WMQEndpoint extends DefaultEndpoint {
     public WMQEndpoint() {
     }
 
-    public WMQEndpoint(String uri, Component component, String destinationName, String destinationType) {
+    public WMQEndpoint(String uri, Component component, String destinationName) {
         super(uri, component);
         this.destinationName = destinationName;
-        this.destinationType = "queue";
-        if (destinationType != null && destinationType.equalsIgnoreCase("topic")) {
-            this.destinationType = "topic";
-        }
     }
 
     public Producer createProducer() throws Exception {
