@@ -1,5 +1,6 @@
 package org.apache.camel.component.wmq;
 
+import com.ibm.mq.MQDestination;
 import com.ibm.mq.MQMessage;
 import com.ibm.mq.MQQueue;
 import com.ibm.mq.MQQueueManager;
@@ -38,7 +39,10 @@ public class WMQProducer extends DefaultProducer {
             LOGGER.debug("MQOO defined to {}", in.getHeader("MQOO"));
             MQOO = (Integer) in.getHeader("MQOO");
         }
-        MQQueue queue = queueManager.accessQueue(endpoint.getDestinationName(), MQOO, null, null, null);
+        MQDestination destination;
+        if (endpoint.getDestinationType().equalsIgnoreCase("queue"))
+            destination = queueManager.accessQueue(endpoint.getDestinationName(), MQOO, null, null, null);
+        else destination = queueManager.accessTopic(endpoint.getDestinationName(), null, MQOO, null, null, null);
 
         LOGGER.debug("Creating MQMessage");
         MQMessage message = new MQMessage();
@@ -187,8 +191,8 @@ public class WMQProducer extends DefaultProducer {
         message.writeString(in.getBody(String.class));
 
         LOGGER.debug("Putting the message ...");
-        queue.put(message);
-        queue.close();
+        destination.put(message);
+        destination.close();
     }
 
 }
