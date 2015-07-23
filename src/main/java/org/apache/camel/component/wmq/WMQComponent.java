@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.Properties;
 
@@ -28,38 +29,42 @@ public class WMQComponent extends UriEndpointComponent {
     public MQQueueManager getQueueManager() {
         if (queueManager == null) {
             LOGGER.debug("Connecting to MQQueueManager ...");
-            Properties connectionProperties = new Properties();
+            Properties loadedProperties = new Properties();
             InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("mq.properties");
             try {
                 LOGGER.debug("Loading mq.properties from the classloader ...");
-                connectionProperties.load(inputStream);
+                loadedProperties.load(inputStream);
             } catch (Exception e) {
                 LOGGER.debug("mq.properties not found in the classloader, trying from etc folder");
                 try {
                     FileInputStream fileInputStream = new FileInputStream(new File(new File(System.getProperty("karaf.home")), "etc"));
-                    connectionProperties.load(fileInputStream);
+                    loadedProperties.load(fileInputStream);
                 } catch (Exception e1) {
                     LOGGER.debug("mq.properties not found from etc folder, falling to default");
-                    connectionProperties.put("hostname", "localhost");
-                    connectionProperties.put("port", 7777);
-                    connectionProperties.put("channel", "QM_TEST.SVRCONN");
-                    connectionProperties.put("name", "QM_TEST");
+                    loadedProperties.put("hostname", "localhost");
+                    loadedProperties.put("port", "7777");
+                    loadedProperties.put("channel", "QM_TEST.SVRCONN");
+                    loadedProperties.put("name", "QM_TEST");
                 }
             }
-            if (connectionProperties.get("hostname") == null) {
+            if (loadedProperties.get("hostname") == null) {
                 throw new IllegalArgumentException("hostname property is missing");
             }
-            if (connectionProperties.get("port") == null) {
+            if (loadedProperties.get("port") == null) {
                 throw new IllegalArgumentException("port property is missing");
             }
-            if (connectionProperties.get("channel") == null) {
+            if (loadedProperties.get("channel") == null) {
                 throw new IllegalArgumentException("channel property is missing");
             }
-            if (connectionProperties.get("name") == null) {
+            if (loadedProperties.get("name") == null) {
                 throw new IllegalArgumentException("name property is missing");
             }
+            Hashtable connectionProperties = new Hashtable();
+            connectionProperties.put("hostname", (String) loadedProperties.get("hostname"));
+            connectionProperties.put("port", Integer.parseInt((String) loadedProperties.get("port")));
+            connectionProperties.put("channel", (String) loadedProperties.get("channel"));
             try {
-                this.queueManager = new MQQueueManager(((String) connectionProperties.get("name")), connectionProperties);
+                this.queueManager = new MQQueueManager(((String) loadedProperties.get("name")), connectionProperties);
             } catch (Exception e) {
                 throw new IllegalStateException("Can't create MQQueueManager", e);
             }
