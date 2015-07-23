@@ -64,6 +64,10 @@ public class WMQComponent extends UriEndpointComponent {
             connectionProperties.put("port", Integer.parseInt((String) loadedProperties.get("port")));
             connectionProperties.put("channel", (String) loadedProperties.get("channel"));
             try {
+                LOGGER.info("Connecting to MQQueueManager {} on {}:{} (channel {})", loadedProperties.get("name"),
+                        connectionProperties.get("hostname"),
+                        connectionProperties.get("port"),
+                        connectionProperties.get("channel"));
                 this.queueManager = new MQQueueManager(((String) loadedProperties.get("name")), connectionProperties);
             } catch (Exception e) {
                 throw new IllegalStateException("Can't create MQQueueManager", e);
