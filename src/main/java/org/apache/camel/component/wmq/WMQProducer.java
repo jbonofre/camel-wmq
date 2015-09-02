@@ -40,7 +40,7 @@ public class WMQProducer extends DefaultProducer {
             MQOO = (Integer) in.getHeader("MQOO");
         }
         MQDestination destination;
-        if (endpoint.getDestinationType().equalsIgnoreCase("queue"))
+        if (endpoint.getDestinationType() == null || endpoint.getDestinationType().equalsIgnoreCase("queue"))
             destination = queueManager.accessQueue(endpoint.getDestinationName(), MQOO, null, null, null);
         else destination = queueManager.accessTopic(endpoint.getDestinationName(), null, MQOO, null, null, null);
 
