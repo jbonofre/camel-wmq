@@ -39,6 +39,7 @@ public class WMQComponent extends UriEndpointComponent {
                 try {
                     FileInputStream fileInputStream = new FileInputStream(new File(new File(new File(System.getProperty("karaf.home")), "etc"), "mq.properties"));
                     loadedProperties.load(fileInputStream);
+                    LOGGER.debug("mq.properties loaded from etc/mq.properties");
                 } catch (Exception e1) {
                     LOGGER.debug("mq.properties not found from etc folder, falling to default");
                     loadedProperties.put("hostname", "localhost");

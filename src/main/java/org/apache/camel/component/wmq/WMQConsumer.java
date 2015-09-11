@@ -31,6 +31,7 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
         MQQueueManager queueManager = component.getQueueManager();
 
         try {
+            LOGGER.debug("Consuming from queue {}", getEndpoint().getDestinationName());
             MQQueue queue = queueManager.accessQueue(getEndpoint().getDestinationName(), MQConstants.MQOO_INPUT_AS_Q_DEF, null, null, null);
             MQMessage message = new MQMessage();
             MQGetMessageOptions options = new MQGetMessageOptions();
@@ -39,6 +40,7 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
             LOGGER.debug("Waiting for message ...");
             queue.get(message, options);
 
+            LOGGER.debug("Get a message with a length of {}", message.getMessageLength());
             String msgText = message.readString(message.getMessageLength());
             message.seek(4);
             int version = message.readInt();
