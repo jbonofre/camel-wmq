@@ -41,7 +41,7 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
             queue.get(message, options);
 
             LOGGER.debug("Get a message with a length of {}", message.getMessageLength());
-            String msgText = message.readString(message.getMessageLength());
+            String msgText = message.readStringOfByteLength(message.getMessageLength());
             message.seek(4);
             int version = message.readInt();
             in.setHeader("MQRFH_VERSION", version);
@@ -65,7 +65,8 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
             while(remainLength > 0) {
 
                 int areaLen = message.readInt();
-                byte[] b = new byte[areaLen];
+                // byte[] b = new byte[areaLen];
+                byte[] b = new byte[message.getMessageLength()];
                 message.readFully(b);
 
                 String areaAsString = new String(b, "UTF-8");
