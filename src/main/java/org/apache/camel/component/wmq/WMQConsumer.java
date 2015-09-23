@@ -30,9 +30,10 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
         WMQComponent component = (WMQComponent) getEndpoint().getComponent();
         MQQueueManager queueManager = component.getQueueManager();
 
+        MQQueue queue = null;
         try {
             LOGGER.debug("Consuming from queue {}", getEndpoint().getDestinationName());
-            MQQueue queue = queueManager.accessQueue(getEndpoint().getDestinationName(), MQConstants.MQOO_INPUT_AS_Q_DEF, null, null, null);
+            queue = queueManager.accessQueue(getEndpoint().getDestinationName(), MQConstants.MQOO_INPUT_AS_Q_DEF, null, null, null);
             MQMessage message = new MQMessage();
             MQGetMessageOptions options = new MQGetMessageOptions();
             options.options = MQConstants.MQGMO_WAIT + MQConstants.MQGMO_PROPERTIES_COMPATIBILITY + MQConstants.MQGMO_ALL_SEGMENTS_AVAILABLE + MQConstants.MQGMO_COMPLETE_MSG + MQConstants.MQGMO_ALL_MSGS_AVAILABLE;
@@ -100,10 +101,12 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
             msgText = msgText.substring(ln);
 
             in.setBody(msgText, String.class);
-
             getProcessor().process(exchange);
         } catch (Exception e) {
             exchange.setException(e);
+        } finally {
+            if (queue != null)
+                queue.close();
         }
 
         if (exchange.getException() != null) {
