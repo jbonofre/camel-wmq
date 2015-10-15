@@ -63,7 +63,7 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
 
             int ln = 0;
             int remainLength = length - STRUC_LENGTH;
-            while(remainLength > 0) {
+            while (remainLength > 0) {
 
                 int areaLen = message.readInt();
                 // byte[] b = new byte[areaLen];
@@ -96,7 +96,7 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
 
             }
 
-            ln = ln + 36 +12;
+            ln = ln + 36 + 12;
 
             msgText = msgText.substring(ln);
 
