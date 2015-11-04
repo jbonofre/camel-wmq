@@ -5,6 +5,10 @@ import com.ibm.mq.MQMessage;
 import com.ibm.mq.MQQueue;
 import com.ibm.mq.MQQueueManager;
 import com.ibm.mq.constants.MQConstants;
+import com.ibm.mq.headers.MQHeader;
+import com.ibm.mq.headers.MQHeaderIterator;
+import com.ibm.mq.headers.MQHeaderList;
+import com.ibm.mq.headers.MQRFH2;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.Processor;
@@ -12,6 +16,8 @@ import org.apache.camel.SuspendableService;
 import org.apache.camel.impl.ScheduledPollConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Iterator;
 
 public class WMQConsumer extends ScheduledPollConsumer implements SuspendableService {
 
@@ -38,69 +44,42 @@ public class WMQConsumer extends ScheduledPollConsumer implements SuspendableSer
             MQGetMessageOptions options = new MQGetMessageOptions();
             options.options = MQConstants.MQGMO_WAIT + MQConstants.MQGMO_PROPERTIES_COMPATIBILITY + MQConstants.MQGMO_ALL_SEGMENTS_AVAILABLE + MQConstants.MQGMO_COMPLETE_MSG + MQConstants.MQGMO_ALL_MSGS_AVAILABLE;
             options.waitInterval = MQConstants.MQWI_UNLIMITED;
-            LOGGER.debug("Waiting for message ...");
+            LOGGER.info("Waiting for message ...");
             queue.get(message, options);
 
-            LOGGER.debug("Get a message with a length of {}", message.getMessageLength());
-            String msgText = message.readStringOfByteLength(message.getMessageLength());
-            message.seek(4);
-            int version = message.readInt();
-            in.setHeader("MQRFH_VERSION", version);
-            int length = message.readInt();
-            in.setHeader("MQLENGTH", length);
-            int encoding = message.readInt();
-            in.setHeader("MQENC", encoding);
-            int codedCharSetId = message.readInt();
-            in.setHeader("MQCCSI", codedCharSetId);
-            String format = message.readStringOfByteLength(8);
-            in.setHeader("MQFMT", format);
-            int flags = message.readInt();
-            in.setHeader("MQFLAGS", flags);
-            int nameValueCodedCharSetId = message.readInt();
-            in.setHeader("MQNVCCSI", nameValueCodedCharSetId);
-            int STRUC_LENGTH = 36;
-            int cnt = 1;
+            LOGGER.info("Message consumed");
 
-            int ln = 0;
-            int remainLength = length - STRUC_LENGTH;
-            while (remainLength > 0) {
-
-                int areaLen = message.readInt();
-                // byte[] b = new byte[areaLen];
-                byte[] b = new byte[message.getMessageLength()];
-                message.readFully(b);
-
-                String areaAsString = new String(b, "UTF-8");
-
-                if (areaAsString.contains("<mcd>") || areaAsString.contains("<MCD>")) {
-                    LOGGER.debug("MCD V2 FOLDER detected");
-                    in.setHeader("MQ.V2FLDR.MCD", areaAsString);
-                } else if (areaAsString.contains("<psc>") || areaAsString.contains("<PSC>")) {
-                    LOGGER.debug("PSC/PUB V2 FOLDER detected");
-                    in.setHeader("MQ.V2FLDR.PUB", areaAsString);
-                } else if (areaAsString.contains("<usr>") || areaAsString.contains("<USR>")) {
-                    LOGGER.debug("USR V2 FOLDER detected");
-                    in.setHeader("MQ.V2FLDR.USR", areaAsString);
-                } else if (areaAsString.contains("<pscr>") || areaAsString.contains("<PSCR>")) {
-                    LOGGER.debug("PSCR V2 FOLDER detected");
-                    in.setHeader("MQ.V2FLDR.PSCR", areaAsString);
-                } else if (areaAsString.contains("<other>") || areaAsString.contains("<OTHER>")) {
-                    LOGGER.debug("OTHER V2 FOLDER detected");
-                    in.setHeader("MQ.V2FLDR.OTHER", areaAsString);
+            MQHeaderList headerList = new MQHeaderList(message);
+            // TODO MQRFH, MQCIH, MQDLH, MQIIH, MQRMH, MQSAPH, MQWIH, MQXQH, MQDH, MQEPH headers support
+            int index = headerList.indexOf("MQRFH2");
+            if (index >= 0) {
+                LOGGER.info("MQRFH2 header detected (index " + index + ")");
+                MQRFH2 rfh = (MQRFH2) headerList.get(index);
+                LOGGER.info("\tformat: " + rfh.getFormat());
+                in.setHeader("mq.rfh2.format", rfh.getFormat());
+                LOGGER.info("\tstruct id: " + rfh.getStrucId());
+                in.setHeader("mq.rfh2.struct.id", rfh.getStrucId());
+                LOGGER.info("\tencoding: " + rfh.getEncoding());
+                in.setHeader("mq.rfh2.encoding", rfh.getEncoding());
+                LOGGER.info("\tcoded charset id: " + rfh.getCodedCharSetId());
+                in.setHeader("mq.rfh2.coded.charset.id", rfh.getCodedCharSetId());
+                LOGGER.info("\tflags: " + rfh.getFlags());
+                in.setHeader("mq.rfh2.flags", rfh.getFlags());
+                LOGGER.info("\tversion: " + rfh.getVersion());
+                in.setHeader("mq.rfh2.version", rfh.getVersion());
+                MQRFH2.Element[] folders = rfh.getFolders();
+                for (MQRFH2.Element folder : folders) {
+                    LOGGER.info("folder " + folder.getName() + ": " + folder.toXML());
+                    in.setHeader("mq.rfh2.folder." + folder.getName(), folder.toXML());
                 }
-
-                remainLength = remainLength - areaLen - 4;
-                cnt = cnt + 1;
-
-                ln = ln + areaLen;
-
             }
 
-            ln = ln + 36 + 12;
+            LOGGER.info("Reading body");
+            byte[] buffer = new byte[message.getDataLength()];
+            message.readFully(buffer);
+            String body = new String(buffer, "UTF-8");
 
-            msgText = msgText.substring(ln);
-
-            in.setBody(msgText, String.class);
+            in.setBody(body, String.class);
             getProcessor().process(exchange);
         } catch (Exception e) {
             exchange.setException(e);
