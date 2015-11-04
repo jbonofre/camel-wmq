@@ -50,7 +50,9 @@ public class WMQEndpoint extends DefaultEndpoint {
     }
 
     public WMQConsumer createConsumer(Processor processor) throws Exception {
-        return new WMQConsumer(this, processor);
+        WMQConsumer consumer = new WMQConsumer(this, processor);
+        consumer.setDelay(5);
+        return consumer;
     }
 
     @ManagedAttribute
