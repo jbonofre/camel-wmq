@@ -44,38 +44,39 @@ public class WMQProducer extends DefaultProducer {
             destination = queueManager.accessQueue(endpoint.getDestinationName(), MQOO, null, null, null);
         else destination = queueManager.accessTopic(endpoint.getDestinationName(), null, MQOO, null, null, null);
 
-        LOGGER.debug("Creating MQMessage");
+        LOGGER.info("Creating MQMessage");
         MQMessage message = new MQMessage();
-        if (in.getHeader("MQFMT") != null) {
-            LOGGER.debug("Message format (MQFMT) set to {}", in.getHeader("MQFMT"));
-            message.format = (String) in.getHeader("MQFMT");
-        } else {
-            LOGGER.debug("Message format (MQFMT) set to MQFMT_RF_HEADER_2 ({})", MQConstants.MQFMT_RF_HEADER_2);
+
+        boolean rfh2 = false;
+        if (in.getHeaders().containsKey("mq.rfh2.format")) {
+            LOGGER.info("mq.rfh2.format");
             message.format = MQConstants.MQFMT_RF_HEADER_2;
+            rfh2 = true;
         }
-        if (in.getHeader("MQRFH_STRUCT") != null) {
-            LOGGER.debug("Message RFH Struct ID (MQRFH_STRUCT) set to {}", in.getHeader("MQRFH_STRUCT"));
-            message.writeString((String) in.getHeader("MQRFH_STRUCT"));
-        } else {
-            LOGGER.debug("Message RFH Struct ID (MQRFH_STRUCT) set to MQRFH_STRUC_ID ({})", MQConstants.MQRFH_STRUC_ID);
+        if (in.getHeader("mq.rfh2.struct.id") != null && rfh2) {
+            LOGGER.info("mq.rfh2.struct.id defined: {}", in.getHeader("mq.rfh2.struct.id"));
+            message.writeString((String) in.getHeader("mq.rfh2.struct.id"));
+        } else if (rfh2){
+            LOGGER.info("mq.rfh2.struct.id not defined, fallback: {}", MQConstants.MQRFH_STRUC_ID);
             message.writeString(MQConstants.MQRFH_STRUC_ID);
         }
-        if (in.getHeader("MQRFH_VERSION") != null) {
-            LOGGER.debug("Message RFH Version (MQRFH_VERSION) set to {}", in.getHeader("MQRFH_VERSION"));
-            message.writeInt4((Integer) in.getHeader("MQRFH_VERSION"));
-        } else {
-            LOGGER.debug("Message RFH Version (MQRFH_VERSION) set to MQRFH_VERSION_2 ({})", MQConstants.MQRFH_VERSION_2);
+        if (in.getHeader("mq.rfh2.version") != null && rfh2) {
+            LOGGER.info("mq.rfh2.version defined: {}", in.getHeader("mq.rfh2.version"));
+            message.writeInt4((Integer) in.getHeader("mq.rfh2.version"));
+        } else if (rfh2){
+            LOGGER.info("mq.rfh2.version not defined, fallback: {}", MQConstants.MQRFH_VERSION_2);
             message.writeInt4(MQConstants.MQRFH_VERSION_2);
         }
 
+        // TODO iterator on the headers and folders
         // v2 folders: mcd, jms, usr, PubSub, pscr, other
-        LOGGER.debug("Dealing with V2 folders");
-        String mcd = (String) in.getHeader("MQ.V2FLDR.MCD");
-        String jms = (String) in.getHeader("MQ.V2FLDR.JMS");
-        String usr = (String) in.getHeader("MQ.V2FLDR.USR");
-        String pub = (String) in.getHeader("MQ.V2FLDR.PUB");
-        String pscr = (String) in.getHeader("MQ.V2FLDR.PSCR");
-        String other = (String) in.getHeader("MQ.V2FLDR.OTHER");
+        LOGGER.info("Dealing with RFH2 folders");
+        String mcd = (String) in.getHeader("mq.rfh2.folder.mcd");
+        String jms = (String) in.getHeader("mq.rfh2.folder.jms");
+        String usr = (String) in.getHeader("mq.rfh2.folder.usr");
+        String pub = (String) in.getHeader("mq.rfh2.folder.psc");
+        String pscr = (String) in.getHeader("mq.rfh2.folder.pscr");
+        String other = (String) in.getHeader("mq.rfh2.folder.other");
 
         if (mcd != null) {
             LOGGER.debug("MCD V2 FOLDER: {}", mcd);
@@ -141,25 +142,29 @@ public class WMQProducer extends DefaultProducer {
             overhead = overhead + 4;
         }
 
-        LOGGER.debug("Set message length: {}", MQConstants.MQRFH_STRUC_LENGTH_FIXED_2 + folderSize + overhead);
-        message.writeInt4(MQConstants.MQRFH_STRUC_LENGTH_FIXED_2 + folderSize + overhead);
-        if (in.getHeader("MQENC") != null) {
-            LOGGER.debug("Message encoding (MQENC) set to {}", in.getHeader("MQENC"));
-            message.writeInt4((Integer) in.getHeader("MQENC"));
-        } else {
-            LOGGER.debug("Message encoding (MQENC) set to MQENC_NATIVE ({})", MQConstants.MQENC_NATIVE);
+        if (rfh2) {
+            LOGGER.debug("Set message length: {}", MQConstants.MQRFH_STRUC_LENGTH_FIXED_2 + folderSize + overhead);
+            message.writeInt4(MQConstants.MQRFH_STRUC_LENGTH_FIXED_2 + folderSize + overhead);
+        }
+        if (in.getHeader("mq.rfh2.encoding") != null && rfh2) {
+            LOGGER.debug("mq.rfh2.encoding defined: {}", in.getHeader("mq.rfh2.encoding"));
+            message.writeInt4((Integer) in.getHeader("mq.rfh2.encoding"));
+        } else if (rfh2) {
+            LOGGER.debug("mq.rfh2.encoding not defined, fallback: {}", MQConstants.MQENC_NATIVE);
             message.writeInt4(MQConstants.MQENC_NATIVE);
         }
-        if (in.getHeader("MQCCSI") != null) {
-            LOGGER.debug("Message coded character set id (MQCCSI) set to {}", in.getHeader("MQCCSI"));
-            message.writeInt4((Integer) in.getHeader("MQCCSI"));
-        } else {
-            LOGGER.debug("Message coded character set id (MQCCSI) set to MQCCSI_DEFAULT ({})", MQConstants.MQCCSI_DEFAULT);
+        if (in.getHeader("mq.rfh2.coded.charset.id") != null && rfh2) {
+            LOGGER.debug("mq.rfh2.coded.charset.id defined: {}", in.getHeader("mq.rfh2.coded.charset.id"));
+            message.writeInt4((Integer) in.getHeader("mq.rfh2.coded.charset.id"));
+        } else if (rfh2) {
+            LOGGER.debug("mq.rfh2.coded.charset.id not defined, fallback: {}", MQConstants.MQCCSI_DEFAULT);
             message.writeInt4(MQConstants.MQCCSI_DEFAULT);
         }
-        message.writeString(MQConstants.MQFMT_NONE);
-        message.writeInt4(MQConstants.MQRFH_NO_FLAGS);
-        message.writeInt4(1208);
+        if (rfh2) {
+            message.writeString(MQConstants.MQFMT_NONE);
+            message.writeInt4(MQConstants.MQRFH_NO_FLAGS);
+            message.writeInt4(1208);
+        }
         if (mcd != null) {
             message.writeInt4(mcd.length());
             message.writeString(mcd);
