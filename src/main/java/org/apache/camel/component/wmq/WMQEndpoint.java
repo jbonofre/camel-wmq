@@ -16,25 +16,12 @@ public class WMQEndpoint extends DefaultEndpoint {
     @UriParam
     private String destinationName;
 
-    @UriParam
-    private String destinationType;
-
     public String getDestinationName() {
         return destinationName;
     }
 
     public void setDestinationName(String destinationName) {
         this.destinationName = destinationName;
-    }
-
-    @ManagedAttribute(description = "MQ destination type (queue or topic)")
-    public String getDestinationType() {
-        return destinationType;
-    }
-
-    @ManagedAttribute(description = "MQ destination type (queue or topic)")
-    public void setDestinationType(String destinationType) {
-        this.destinationType = destinationType;
     }
 
     public WMQEndpoint() {

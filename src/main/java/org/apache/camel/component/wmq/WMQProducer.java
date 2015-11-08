@@ -1,9 +1,6 @@
 package org.apache.camel.component.wmq;
 
-import com.ibm.mq.MQDestination;
-import com.ibm.mq.MQMessage;
-import com.ibm.mq.MQQueue;
-import com.ibm.mq.MQQueueManager;
+import com.ibm.mq.*;
 import com.ibm.mq.constants.MQConstants;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
@@ -40,12 +37,31 @@ public class WMQProducer extends DefaultProducer {
             MQOO = (Integer) in.getHeader("MQOO");
         }
         MQDestination destination;
-        if (endpoint.getDestinationType() == null || endpoint.getDestinationType().equalsIgnoreCase("queue"))
-            destination = queueManager.accessQueue(endpoint.getDestinationName(), MQOO, null, null, null);
-        else destination = queueManager.accessTopic(endpoint.getDestinationName(), null, MQOO, null, null, null);
+        if (getEndpoint().getDestinationName().startsWith("topic:")) {
+            String destinationName = getEndpoint().getDestinationName().substring("topic:".length());
+            destination = queueManager.accessTopic(destinationName, null, MQOO, null, null);
+        } else {
+            String destinationName = getEndpoint().getDestinationName();
+            if (destinationName.startsWith("queue:")) {
+                destinationName = destinationName.substring("queue:".length());
+            }
+            destination = queueManager.accessQueue(destinationName, MQOO, null, null, null);
+        }
 
         LOGGER.info("Creating MQMessage");
         MQMessage message = new MQMessage();
+
+        LOGGER.info("Populating MQMD headers");
+        message.format = (String) in.getHeader("mq.mqmd.format");
+        message.characterSet = (Integer) in.getHeader("mq.mqmd.charset");
+        message.expiry = (Integer) in.getHeader("mq.mqmd.expiry");
+        message.putApplicationName = (String) in.getHeader("mq.mqmd.put.appl.name");
+        message.groupId = (byte[]) in.getHeader("mq.mqmd.group.id");
+        message.messageSequenceNumber = (Integer) in.getHeader("mq.mqmd.msg.seq.number");
+        message.accountingToken = (byte[]) in.getHeader("mq.mqmd.msg.accounting.token");
+        message.correlationId = (byte[]) in.getHeader("mq.mqmd.correl.id");
+        message.replyToQueueName = (String) in.getHeader("mq.mqmd.replyto.q");
+        message.replyToQueueManagerName = (String) in.getHeader("mq.mqmd.replyto.q.mgr");
 
         boolean rfh2 = false;
         if (in.getHeaders().containsKey("mq.rfh2.format")) {
