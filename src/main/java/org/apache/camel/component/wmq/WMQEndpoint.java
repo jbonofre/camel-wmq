@@ -16,12 +16,56 @@ public class WMQEndpoint extends DefaultEndpoint {
     @UriParam
     private String destinationName;
 
+    @UriParam
+    private String queueManagerName;
+
+    @UriParam
+    private String queueManagerHostname;
+
+    @UriParam
+    private String queueManagerPort;
+
+    @UriParam
+    private String queueManagerChannel;
+
     public String getDestinationName() {
         return destinationName;
     }
 
     public void setDestinationName(String destinationName) {
         this.destinationName = destinationName;
+    }
+
+    public String getQueueManagerName() {
+        return queueManagerName;
+    }
+
+    public void setQueueManagerName(String queueManagerName) {
+        this.queueManagerName = queueManagerName;
+    }
+
+    public String getQueueManagerHostname() {
+        return queueManagerHostname;
+    }
+
+    public void setQueueManagerHostname(String queueManagerHostname) {
+        this.queueManagerHostname = queueManagerHostname;
+    }
+
+    public String getQueueManagerPort() {
+        return queueManagerPort;
+    }
+
+    public void setQueueManagerPort(String queueManagerPort) {
+        this.queueManagerPort = queueManagerPort;
+    }
+
+    public String getQueueManagerChannel() {
+        return queueManagerChannel;
+    }
+
+    public void setQueueManagerChannel(String queueManagerChannel) {
+        this.queueManagerChannel = queueManagerChannel;
     }
 
     public WMQEndpoint() {

@@ -26,7 +26,11 @@ public class WMQProducer extends DefaultProducer {
 
     public void process(Exchange exchange) throws Exception {
         WMQComponent component = (WMQComponent) this.getEndpoint().getComponent();
-        MQQueueManager queueManager = component.getQueueManager();
+
+        MQQueueManager queueManager = component.getQueueManager(getEndpoint().getQueueManagerName(),
+                getEndpoint().getQueueManagerHostname(),
+                getEndpoint().getQueueManagerPort(),
+                getEndpoint().getQueueManagerChannel());
 
         Message in = exchange.getIn();
 

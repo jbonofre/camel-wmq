@@ -8,15 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 public class WMQComponent extends UriEndpointComponent {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(WMQComponent.class);
 
-    private MQQueueManager queueManager;
+    private Map<String, MQQueueManager> queueManagers = new HashMap<String, MQQueueManager>();
 
     public WMQComponent() {
         super(WMQEndpoint.class);
@@ -27,58 +25,65 @@ public class WMQComponent extends UriEndpointComponent {
     }
 
     public MQQueueManager getQueueManager() {
-        if (queueManager == null) {
-            LOGGER.debug("Connecting to MQQueueManager ...");
-            Properties loadedProperties = new Properties();
-            InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("mq.properties");
-            try {
-                LOGGER.debug("Loading mq.properties from the classloader ...");
-                loadedProperties.load(inputStream);
-            } catch (Exception e) {
-                LOGGER.debug("mq.properties not found in the classloader, trying from etc folder");
+        return getQueueManager("default", null, null, null);
+    }
+
+    public MQQueueManager getQueueManager(String name, String hostname, String port, String channel) {
+        if (name == null) {
+            LOGGER.warn("QueueManager name not defined, fallback to default");
+            name = "default";
+        }
+        if (queueManagers.get(name) == null) {
+            LOGGER.debug("Connecting to MQQueueManager {} ...", name);
+            Properties qmProperties = new Properties();
+            if (hostname != null && port != null && channel != null) {
+                qmProperties.put(name + ".hostname", hostname);
+                qmProperties.put(name + ".port", port);
+                qmProperties.put(name + ".channel", channel);
+            } else {
+                InputStream inputStream = this.getClass().getClassLoader().getResourceAsStream("mq.properties");
                 try {
-                    FileInputStream fileInputStream = new FileInputStream(new File(new File(new File(System.getProperty("karaf.home")), "etc"), "mq.properties"));
-                    loadedProperties.load(fileInputStream);
-                    LOGGER.debug("mq.properties loaded from etc/mq.properties");
-                } catch (Exception e1) {
-                    LOGGER.debug("mq.properties not found from etc folder, falling to default");
-                    loadedProperties.put("hostname", "localhost");
-                    loadedProperties.put("port", "7777");
-                    loadedProperties.put("channel", "QM_TEST.SVRCONN");
-                    loadedProperties.put("name", "QM_TEST");
+                    LOGGER.debug("Loading mq.properties from the classloader ...");
+                    qmProperties.load(inputStream);
+                } catch (Exception e) {
+                    LOGGER.debug("mq.properties not found in the classloader, trying from etc folder");
+                    try {
+                        FileInputStream fileInputStream = new FileInputStream(new File(new File(new File(System.getProperty("karaf.home")), "etc"), "mq.properties"));
+                        qmProperties.load(fileInputStream);
+                        LOGGER.debug("mq.properties loaded from etc/mq.properties");
+                    } catch (Exception e1) {
+                        LOGGER.debug("mq.properties not found from etc folder, falling to default");
+                        qmProperties.put(name + ".hostname", "localhost");
+                        qmProperties.put(name + ".port", "7777");
+                        qmProperties.put(name + ".channel", "QM_TEST.SVRCONN");
+                    }
                 }
             }
-            if (loadedProperties.get("hostname") == null) {
-                throw new IllegalArgumentException("hostname property is missing");
+            if (qmProperties.get(name + ".hostname") == null) {
+                throw new IllegalArgumentException(name + ".hostname property is missing");
             }
-            if (loadedProperties.get("port") == null) {
-                throw new IllegalArgumentException("port property is missing");
+            if (qmProperties.get(name + ".port") == null) {
+                throw new IllegalArgumentException(name + ".port property is missing");
             }
-            if (loadedProperties.get("channel") == null) {
-                throw new IllegalArgumentException("channel property is missing");
-            }
-            if (loadedProperties.get("name") == null) {
-                throw new IllegalArgumentException("name property is missing");
+            if (qmProperties.get(name + ".channel") == null) {
+                throw new IllegalArgumentException(name + ".channel property is missing");
             }
             Hashtable connectionProperties = new Hashtable();
-            connectionProperties.put("hostname", (String) loadedProperties.get("hostname"));
-            connectionProperties.put("port", Integer.parseInt((String) loadedProperties.get("port")));
-            connectionProperties.put("channel", (String) loadedProperties.get("channel"));
+            connectionProperties.put("hostname", (String) qmProperties.get(name + ".hostname"));
+            connectionProperties.put("port", Integer.parseInt((String) qmProperties.get(name + ".port")));
+            connectionProperties.put("channel", (String) qmProperties.get(name + ".channel"));
             try {
-                LOGGER.info("Connecting to MQQueueManager {} on {}:{} (channel {})", loadedProperties.get("name"),
-                        loadedProperties.get("hostname"),
-                        loadedProperties.get("port"),
-                        loadedProperties.get("channel"));
-                this.queueManager = new MQQueueManager(((String) loadedProperties.get("name")), connectionProperties);
+                LOGGER.info("Connecting to MQQueueManager {} on {}:{} (channel {})", name,
+                        qmProperties.get(name + ".hostname"),
+                        qmProperties.get(name + ".port"),
+                        qmProperties.get(name + ".channel"));
+                queueManagers.put(name, new MQQueueManager(name, connectionProperties));
             } catch (Exception e) {
                 throw new IllegalStateException("Can't create MQQueueManager", e);
             }
         }
-        return queueManager;
-    }
 
-    public void setQueueManager(MQQueueManager queueManager) {
-        this.queueManager = queueManager;
+        return queueManagers.get(name);
     }
 
     @Override
